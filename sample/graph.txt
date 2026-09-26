@@ -1,0 +1,7 @@
+# 源 目标
+a b
+b a
+b c
+c d
+d c
+e f
