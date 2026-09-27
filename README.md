@@ -1,51 +1,49 @@
 # graph-scc
 
-有向图的强连通分量（Tarjan/Kosaraju 思路），只用 Python 标准库。
+有向图的强连通分量（迭代版 Tarjan），只用 Python 标准库。
 
 ```
 python3 -m graphscc.cli --edges sample/graph.txt
+python3 -m graphscc.cli --edges sample/graph.txt --counters
 python3 -m unittest discover -s tests -v
 ```
 
 ## 口径（README 为准）
 
 - **强连通 = 互相可达**：`a -> b` 单向不算同一个分量。`sample/graph.txt` 里
-  `a<->b`、`c<->d`、`e->f` 应该是 `[["a","b"],["c","d"],["e","f"]]`；
-  现在用并查集把「有边相连」的节点并在一起，得到 `[["a","b","c","d"],["e","f"]]`，
-  把两条单向边 `b->c` 当成无向边了。
-- 分量内部按字典序排序，分量之间按「最小成员」排序，输出要稳定。
-- 自环算一个大小为 1 的分量；孤立节点（只出现在边表里但没有任何边）也要单独成组。
+  `a<->b`、`c<->d`、`e<->f`，加上一条单向边 `b -> c`，输出
+  `[["a","b"],["c","d"],["e","f"]]`；不能把单向边当无向边合并成
+  `[["a","b","c","d"],["e","f"]]`。
+- 分量内部按字典序排序，分量之间按「最小成员」排序，输出稳定，与边的插入顺序无关。
+- 自环算一个大小为 1 的分量；任何出现在边表里的端点（哪怕没有任何关联边）
+  都单独成组，不漏节点。
 - 不变量：每条边的两端要么在同一分量、要么分属两个分量且只有一个方向可达；
-  与「对每个节点做正反向两次可达性、取交集」的朴素参考实现结果完全一致。
-- 规模：10 万节点、100 万边要在 O(V+E) 时间、O(V+E) 内存内完成（Tarjan 一次 DFS）；
-  不许对每个节点各做一次可达性搜索。
+  与「对每个节点做正反向两次可达性、取交集」的朴素参考实现
+  （`graphscc/naive.py`）结果逐组一致。
+- 规模：10 万节点、100 万边在 O(V+E) 时间、O(V+E) 内存内完成；
+  迭代式 DFS，不受递归深度限制；不对每个节点各做一次可达性搜索。
 
-## 现在的行为
+## 实现
 
-- `components` 用并查集把每条边的两端 `union` 起来，等价于求**无向**连通分量：
-  单向边 `b -> c` 会把 `c` 并进 `a/b` 那一组。
-- 输出顺序依赖字典插入顺序，没有按最小成员排序。
-- 只为出现在边表里的节点建组，孤立节点不会出现。
-
-## 计划新增的能力
-
-```
---edges 文件    边表：每行「源 目标」
---counters      打印 DFS 访问次数
-```
+- `components(edges, counters=None)`：迭代版 Tarjan，一次 DFS 求出全部分量。
+  传入 `counters` 字典时回填 `nodes`、`edges`、`dfs_visits`、`edge_scans`。
+- `--counters` 额外打印一行，例如 `dfs_visits=6 edges_scanned=7`。
+- 边表每行必须是两个空白分隔的字段；`#` 开头与空行跳过，字段数不对时报错
+  并指出 1 起始的物理行号；空输入返回空列表 `[]`。
 
 ## 输出
 
 ```
 [["a", "b"], ["c", "d"], ["e", "f"]]
-components=… nodes=…
+components=3 nodes=6
 ```
 
 ## 目录
 
 ```
-graphscc/scc.py   边表解析与分量计算
-graphscc/cli.py   命令行入口
-tests/            unittest 用例
-sample/graph.txt  两条双向边 + 一条单向边
+graphscc/scc.py    边表解析与 Tarjan 分量计算
+graphscc/naive.py  朴素参考实现（正反两次可达取交集，仅供对照）
+graphscc/cli.py    命令行入口（--edges、--counters）
+tests/             unittest 用例（含 1000 张随机图逐组比对）
+sample/graph.txt   三条双向边 + 一条单向边
 ```

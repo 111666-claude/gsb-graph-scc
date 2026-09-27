@@ -9,7 +9,10 @@ from .scc import components, parse_edges
 
 def build_parser():
     parser = argparse.ArgumentParser(prog="graph-scc", description="强连通分量")
-    parser.add_argument("--edges", required=True, help="边表：源 目标")
+    parser.add_argument("--edges", required=True, help="边表：每行 源 目标")
+    parser.add_argument(
+        "--counters", action="store_true", help="打印 DFS 访问次数等计数"
+    )
     return parser
 
 
@@ -21,9 +24,15 @@ def main(argv=None):
     except (OSError, ValueError) as error:
         print("错误：%s" % error, file=sys.stderr)
         return 2
-    groups = components(edges)
+    counters = {} if args.counters else None
+    groups = components(edges, counters=counters)
     print(json.dumps(groups, ensure_ascii=False))
     print("components=%d nodes=%d" % (len(groups), sum(len(group) for group in groups)))
+    if counters is not None:
+        print(
+            "dfs_visits=%(dfs_visits)d edges_scanned=%(edge_scans)d"
+            % counters
+        )
     return 0
 
 
